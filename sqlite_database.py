@@ -1,9 +1,8 @@
-from sqlalchemy import create_engine, DateTime, String
+from sqlalchemy import DateTime, String, Boolean
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column 
 from datetime import datetime
-
-
-engine = create_engine("sqlite:///news_flow_db.db")
+from db_connection import DbConnection
+from sqlalchemy import select
 
 
 class Base(DeclarativeBase):
@@ -19,5 +18,15 @@ class NewsFlow(Base):
   header_news: Mapped[str] = mapped_column(String(200))
 
 
-Base.metadata.create_all(engine)
+class User(Base):
+  __tablename__ = "users"
+
+  id: Mapped[int] = mapped_column(primary_key=True)
+  username: Mapped[str] = mapped_column(String())
+  password: Mapped[str] = mapped_column(String())
+  disabled: Mapped[bool] = mapped_column(Boolean())
+
+
+DbConnection().create_all_models(Base)
+
 
