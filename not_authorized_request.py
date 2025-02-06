@@ -1,14 +1,14 @@
 from sqlite_database import UserRequests
 from sqlalchemy import select
 from db_connection import DbConnection
-from datetime import timedelta, datetime, time, date
+from datetime import timedelta, datetime
 
 
 def not_authenticated_request_check(ip_adress, num_of_headers):
   db = DbConnection()
   Session = db.get_session()
   with Session as session:
-    user_requests = select(UserRequests).where(ip_adress==ip_adress).order_by(UserRequests.date.desc(), UserRequests.time.desc())
+    user_requests = select(UserRequests).where(UserRequests.ip_adress==ip_adress).order_by(UserRequests.date.desc(), UserRequests.time.desc())
   request = Session.scalars(user_requests).fetchmany(5)
   headers_count = num_of_headers
   for number in range(len(request)):

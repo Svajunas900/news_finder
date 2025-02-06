@@ -13,7 +13,8 @@ from dotenv import load_dotenv
 import os 
 from fastapi.responses import RedirectResponse
 import jwt
-from request_validation import not_authenticated_request_check
+from not_authorized_request import not_authenticated_request_check
+from authorized_requests import authenticated_request_check
 
 
 load_dotenv()
@@ -33,9 +34,9 @@ def home(request: Request):
     "username": "Svajunas",
     "password": "koncius"
   }
+ 
   login_response = requests.post("http://localhost:8000/token", data=login_data)
   token = login_response.json().get("access_token")
- 
   request.session["access_token"] = token
   return RedirectResponse("protected")
 
@@ -44,7 +45,7 @@ def home(request: Request):
 def news(
    news: News, 
    request: Request,
-   logged_in: Annotated[bool, Depends(validate_session)]):
+   current_user: Annotated[str, Depends(get_current_active_user)]):
   # headlines = get_headlines(news.number_of_news)
   client_ip = request.client.host
   db = DbConnection()
@@ -52,14 +53,23 @@ def news(
   today = datetime.now()
   date = datetime(today.year, today.month, today.day)
   time = str(datetime.time(datetime.now()))
-  if logged_in:
-    token = request.session["access_token"]
+ 
+  if current_user:
+    token = request.session.get("access_token")
+    print("Logged IN")
     payload = jwt.decode(token, SECRET_KEY, [ALGORITHM])
-    with Session as session:
-      request = UserRequests(user_id=payload.user_id, request="Get_Headlines", time=time, date=date, ip_adress=client_ip, header_number=news.number_of_news)
-      session.add(request)
-      session.commit()
+    auth_check = authenticated_request_check(payload["id"], news.number_of_news)
+    if auth_check:
+      with Session as session:
+        request = UserRequests(user_id=payload["id"], request="Get_Headlines", time=time, date=date, ip_adress=client_ip, header_number=news.number_of_news)
+        session.add(request)
+        session.commit()
+      print("success")
+    else:
+      print("Not")
+      
   else:
+    print("Not Logged IN")
     if news.number_of_news > 5:
        return "You have to be authenticated"
     check = not_authenticated_request_check(client_ip, news.number_of_news)
@@ -114,10 +124,15 @@ def read_protected_data(
    request: Request,
    logged_in: Annotated[str, Depends(validate_session)]
    ):
+
     if logged_in: 
       token = request.session["access_token"]
       payload = jwt.decode(token, SECRET_KEY, [ALGORITHM])
-      return {"message": f"Hello {payload}, you are logged in and can access this protected route!"}
+      # HERE IS THE PROBLEM 
+      news = requests.post("http://localhost:8000/news", json={"number_of_news": 2})
+      return {"message": f"Hello {news.text} {payload['id'], payload['sub']}, you are logged in and can access this protected route!"}
+      # RETURN
+      # {"message":"Hello {\"detail\":\"Not authenticated\"} (2, 'Svajunas'), you are logged in and can access this protected route!"}
     else:
       return "None"
 
