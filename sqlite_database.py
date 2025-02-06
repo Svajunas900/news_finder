@@ -1,4 +1,4 @@
-from sqlalchemy import DateTime, String, Boolean, ForeignKey
+from sqlalchemy import DateTime, String, Boolean, ForeignKey, Integer
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column 
 from datetime import datetime
 from db_connection import DbConnection
@@ -41,11 +41,13 @@ class UserRequests(Base):
   __tablename__ = "user_requests"
 
   id: Mapped[int] = mapped_column(primary_key=True)
-  user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+  user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), default=None)
   request: Mapped[str] = mapped_column(String())
   time: Mapped[str] = mapped_column(String())
   date: Mapped[datetime] = mapped_column(DateTime())
   ip_adress: Mapped[str] = mapped_column(String())
+  header_number: Mapped[int] = mapped_column(Integer)
+
 
 DbConnection().create_all_models(Base)
 

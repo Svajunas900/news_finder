@@ -2,7 +2,7 @@ from db_connection import DbConnection
 from sqlalchemy import select
 from sqlite_database import User
 from typing import Annotated
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
 from datetime import datetime, timedelta, timezone
@@ -11,6 +11,7 @@ from jwt.exceptions import InvalidTokenError
 from dotenv import load_dotenv
 import os
 from models import TokenData
+import logging
 
 
 load_dotenv()
@@ -84,5 +85,9 @@ async def get_current_active_user(current_user: Annotated[User, Depends(get_curr
   return current_user
 
 
-
-
+def validate_session(request: Request) -> bool:
+  session_access_token = request.session.get("access_token")
+  if not session_access_token:
+    logging.info("No Authorization and access_token in session, redirecting to login")
+    return False
+  return True

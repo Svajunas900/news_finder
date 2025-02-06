@@ -6,7 +6,7 @@
 # db = DbConnection()
 # Session = db.get_session()
 # with Session as session:
-#   user = User(id=1, username="Svajunas", password=get_password_hash("koncius"), disabled=False)
+#   user = User(id=2, username="Svajunas", password=get_password_hash("koncius"), disabled=False, payable=False)
 #   session.add(user)
 #   session.commit()
 
@@ -16,4 +16,4 @@
 # with Session as session:
 #   users = select(Logs)
 # for user in Session.scalars(users):
-#   print(user.user_id, user.date, user.time)
+#   print(user.time, user.date)
