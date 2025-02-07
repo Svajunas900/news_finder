@@ -19,28 +19,25 @@ def authenticated_request_check(user_id, header_number):
 def check_requests(user_id, header_number):
   db = DbConnection()
   Session = db.get_session()
-  print(user_id)
   with Session as session:
     user_requests = select(UserRequests).where(UserRequests.user_id==user_id).order_by(UserRequests.date, UserRequests.time)
   headers = header_number
   today = datetime.today().date()
-  print("------------------------------------------")
   user_request = Session.scalar(user_requests)
   if user_request:
-    print("------------------------------------------")
     for request in Session.scalars(user_requests):
-      print("------------------------------------------")
+      request_date = request.date.date()
       if check_if_ten_days_passed(request):
-        print("Didn't passed ten days")
+        print("10 days passed")
+        print("Your free trial has ended")
         return False
-      if today == request.date:
+      if today == request_date:
         print("Same day")
         headers += request.header_number
         if headers >= 20:
           print("Over 20 headers today")
           return False
-      print("Success Headers")
-      return True
+    print("Success Headers")
   else: 
     return True
 
@@ -55,5 +52,5 @@ def check_if_ten_days_passed(request):
     print("Ten days pasted")
     return True
   else:
-    print(f"You still have {last_request_date_plus_two - present_date}")
+    print(f"You still have {last_request_date_plus_two - present_date} days until your free trial ends")
     return False

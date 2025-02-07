@@ -17,11 +17,12 @@ def not_authenticated_request_check(ip_adress, num_of_headers):
     if not passed:
       headers_count += user_request.header_number
       if headers_count >= 5:
+        print("You reached your two days header limit")
         return False
       else:
         continue
     else:
-      continue
+      return True
   return True
 
 

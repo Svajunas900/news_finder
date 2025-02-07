@@ -2,7 +2,7 @@ from db_connection import DbConnection
 from sqlalchemy import select
 from sqlite_database import User
 from typing import Annotated
-from fastapi import Depends, HTTPException, status, Request
+from fastapi import Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
 from datetime import datetime, timedelta, timezone
@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 import os
 from models import TokenData
 import logging
+from typing import Optional
 
 
 load_dotenv()
@@ -34,7 +35,7 @@ def get_password_hash(password):
 
 def get_user(username:str):
   Session = DbConnection().get_session()
-  with Session as session:
+  with Session:
     user = select(User).where(User.username==username)
   return Session.scalar(user)
 
@@ -59,29 +60,34 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
   return encoded_jwt
 
 
-async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
-  credentials_exception = HTTPException(
-      status_code=status.HTTP_401_UNAUTHORIZED,
-      detail="Could not validate credentials",
-      headers={"WWW-Authenticate": "Bearer"},
-  )
-  try:
-      payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-      username: str = payload.get("sub")
-      if username is None:
-          raise credentials_exception
-      token_data = TokenData(username=username)
-  except InvalidTokenError:
-      raise credentials_exception
-  user = get_user(username=token_data.username)
-  if user is None:
-      raise credentials_exception
-  return user
+def get_token_from_request(request: Request) -> Optional[str]:
+  token = request.headers.get("Authorization")
+  if token and token.startswith("Bearer "):
+      return token[7:]  
+  return None
+
+
+async def get_current_user(token: Annotated[Optional[str], Depends(get_token_from_request)]):
+  if token:
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            return None
+        token_data = TokenData(username=username)
+    except InvalidTokenError:
+        return None
+    user = get_user(username=token_data.username)
+    if user is None:
+        return None
+    return user
+  return None
 
 
 async def get_current_active_user(current_user: Annotated[User, Depends(get_current_user)]):
-  if current_user.disabled:
-    raise HTTPException(status_code=400, detail="Inactive user")
+  if current_user:
+    if current_user.disabled:
+      raise HTTPException(status_code=400, detail="Inactive user")
   return current_user
 
 
@@ -90,4 +96,5 @@ def validate_session(request: Request) -> bool:
   if not session_access_token:
     logging.info("No Authorization and access_token in session, redirecting to login")
     return False
-  return True
+  return session_access_token
+

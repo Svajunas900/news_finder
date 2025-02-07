@@ -1,9 +1,9 @@
 from fastapi import FastAPI, Depends, HTTPException, status, Request
 from scraper import get_headlines
-from models import News, User, Token
+from models import News, Token
 from sqlite_database import Logs, UserRequests, User as db_User
 from datetime import datetime, timedelta
-from functions import get_current_active_user, authenticate_user, create_access_token, get_current_user, validate_session
+from functions import get_current_active_user, authenticate_user, create_access_token
 from typing import Annotated
 from fastapi.security import OAuth2PasswordRequestForm
 import requests
@@ -38,38 +38,36 @@ def home(request: Request):
   login_response = requests.post("http://localhost:8000/token", data=login_data)
   token = login_response.json().get("access_token")
   request.session["access_token"] = token
-  return RedirectResponse("protected")
+  return RedirectResponse("news")
 
 
 @app.post("/news")
-def news(
+async def news(
    news: News, 
    request: Request,
    current_user: Annotated[str, Depends(get_current_active_user)]):
-  # headlines = get_headlines(news.number_of_news)
   client_ip = request.client.host
   db = DbConnection()
   Session = db.get_session()
   today = datetime.now()
   date = datetime(today.year, today.month, today.day)
   time = str(datetime.time(datetime.now()))
- 
+
   if current_user:
-    token = request.session.get("access_token")
-    print("Logged IN")
+    token = request.headers["authorization"].split(" ")[1]
     payload = jwt.decode(token, SECRET_KEY, [ALGORITHM])
-    auth_check = authenticated_request_check(payload["id"], news.number_of_news)
-    if auth_check:
+    request_check = authenticated_request_check(payload["id"], news.number_of_news)
+    if request_check:
       with Session as session:
         request = UserRequests(user_id=payload["id"], request="Get_Headlines", time=time, date=date, ip_adress=client_ip, header_number=news.number_of_news)
         session.add(request)
         session.commit()
-      print("success")
+      headlines = get_headlines(news.number_of_news)
+      return {"Headlines": headlines,
+              "Date": datetime.now()}
     else:
-      print("Not")
-      
+      return {"Headlines": "Can't get more headlines for today"}
   else:
-    print("Not Logged IN")
     if news.number_of_news > 5:
        return "You have to be authenticated"
     check = not_authenticated_request_check(client_ip, news.number_of_news)
@@ -78,12 +76,12 @@ def news(
         request = UserRequests(user_id=1, request="Get_Headlines", time=time, date=date, ip_adress=client_ip, header_number=news.number_of_news)
         session.add(request)
         session.commit()
+      headlines = get_headlines(news.number_of_news)
+      return {"Headlines": headlines,
+              "Date": datetime.now()}
     else:
        return "Error"
     
-  return {"Headlines": "headlines",
-          "Date": datetime.now()}
-
 
 @app.post("/token")
 async def login_for_access_token(
@@ -119,26 +117,27 @@ async def read_users_me(
     return current_user
 
 
-@app.get("/protected")
+@app.get("/news")
 def read_protected_data(
    request: Request,
-   logged_in: Annotated[str, Depends(validate_session)]
+   current_user: Annotated[str, Depends(get_current_active_user)]
    ):
+  if current_user: 
+    token = request.session["access_token"]
+    headers = {
+      "Authorization": f"Bearer {token}"
+    }
+    news = requests.post("http://localhost:8000/news", json={"number_of_news": 5}, headers=headers)
+    return news.text
 
-    if logged_in: 
-      token = request.session["access_token"]
-      payload = jwt.decode(token, SECRET_KEY, [ALGORITHM])
-      # HERE IS THE PROBLEM 
-      news = requests.post("http://localhost:8000/news", json={"number_of_news": 2})
-      return {"message": f"Hello {news.text} {payload['id'], payload['sub']}, you are logged in and can access this protected route!"}
-      # RETURN
-      # {"message":"Hello {\"detail\":\"Not authenticated\"} (2, 'Svajunas'), you are logged in and can access this protected route!"}
-    else:
-      return "None"
+  else:    # IF NOT AUTHENTICATED 
+    news = requests.post("http://localhost:8000/news", json={"number_of_news": 1})
+    return news.text
+    
 
 
 @app.get("/logout")
 async def logout(request: Request, response: RedirectResponse):
-    request.session.clear()
-    response.delete_cookie(key="Authorization")
-    return RedirectResponse('')
+  request.session.clear()
+  response.delete_cookie(key="Authorization")
+  return RedirectResponse('')
