@@ -5,10 +5,10 @@ from datetime import datetime, timedelta
 
 def authenticated_request_check(user_id, header_number):
   db = DbConnection()
-  Session = db.get_session()
-  with Session as session:
+  session = db.get_session()
+  with session:
     select_user = select(User).where(User.id==user_id)
-  user = Session.scalar(select_user)
+  user = session.scalar(select_user)
   if user.payable:
     return True
   else:
@@ -18,14 +18,14 @@ def authenticated_request_check(user_id, header_number):
 
 def check_requests(user_id, header_number):
   db = DbConnection()
-  Session = db.get_session()
-  with Session as session:
+  session = db.get_session()
+  with session:
     user_requests = select(UserRequests).where(UserRequests.user_id==user_id).order_by(UserRequests.date, UserRequests.time)
   headers = header_number
   today = datetime.today().date()
-  user_request = Session.scalar(user_requests)
+  user_request = session.scalar(user_requests)
   if user_request:
-    for request in Session.scalars(user_requests):
+    for request in session.scalars(user_requests):
       request_date = request.date.date()
       if check_if_ten_days_passed(request):
         print("10 days passed")

@@ -6,10 +6,10 @@ from datetime import timedelta, datetime
 
 def not_authenticated_request_check(ip_adress, num_of_headers):
   db = DbConnection()
-  Session = db.get_session()
-  with Session as session:
+  session = db.get_session()
+  with session:
     user_requests = select(UserRequests).where(UserRequests.ip_adress==ip_adress).order_by(UserRequests.date.desc(), UserRequests.time.desc())
-  request = Session.scalars(user_requests).fetchmany(5)
+  request = session.scalars(user_requests).fetchmany(5)
   headers_count = num_of_headers
   for number in range(len(request)):
     user_request = request[number]
