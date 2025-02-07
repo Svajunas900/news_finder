@@ -81,6 +81,7 @@ async def get_current_user(token: Annotated[Optional[str], Depends(get_token_fro
     if user is None:
         return None
     return user
+  print(token)
   return None
 
 

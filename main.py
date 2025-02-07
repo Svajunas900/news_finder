@@ -3,7 +3,7 @@ from scraper import get_headlines
 from models import News, Token
 from sqlite_database import Logs, UserRequests, User as db_User
 from datetime import datetime, timedelta
-from functions import get_current_active_user, authenticate_user, create_access_token
+from functions import get_current_active_user, authenticate_user, create_access_token, validate_session
 from typing import Annotated
 from fastapi.security import OAuth2PasswordRequestForm
 import requests
@@ -15,6 +15,8 @@ from fastapi.responses import RedirectResponse
 import jwt
 from not_authorized_request import not_authenticated_request_check
 from authorized_requests import authenticated_request_check
+from db_connection import DbConnection
+from sqlite_database import Base
 
 
 load_dotenv()
@@ -26,6 +28,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 app = FastAPI()
 app.add_middleware(SessionMiddleware, secret_key=SUPER_SECRET_KEY)
+DbConnection().create_all_models(Base)
 
 
 @app.get("/")
@@ -38,7 +41,11 @@ def home(request: Request):
   login_response = requests.post("http://localhost:8000/token", data=login_data)
   token = login_response.json().get("access_token")
   request.session["access_token"] = token
-  return RedirectResponse("news")
+  headers = {
+      "Authorization": f"Bearer {token}"
+    }
+  print(token)
+  return RedirectResponse("news", headers=headers)
 
 
 @app.post("/news")
@@ -120,7 +127,7 @@ async def read_users_me(
 @app.get("/news")
 def read_protected_data(
    request: Request,
-   current_user: Annotated[str, Depends(get_current_active_user)]
+   current_user: Annotated[str, Depends(validate_session)]
    ):
   if current_user: 
     token = request.session["access_token"]

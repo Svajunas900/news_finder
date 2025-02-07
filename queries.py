@@ -14,6 +14,6 @@ with Session as session:
 db = DbConnection()
 Session = db.get_session()
 with Session as session:
-  users = select(UserRequests)
+  users = select(User)
 for user in Session.scalars(users):
-  print(user.id, user.time, user.date, user.header_number, user.user_id)
+  print(user.id, )
