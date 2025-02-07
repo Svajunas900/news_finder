@@ -88,7 +88,7 @@ async def login_for_access_token(
   form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
 ) -> Token:
   db = DbConnection()
-  Session = db.get_session()
+  session = db.get_session()
   user = authenticate_user(form_data.username, form_data.password)
   if not user:
       raise HTTPException(
@@ -103,7 +103,7 @@ async def login_for_access_token(
   today = datetime.now()
   date = datetime(today.year, today.month, today.day)
   time = str(datetime.time(datetime.now()))
-  with Session as session: 
+  with session: 
     log = Logs(user_id=user.id, time=time, date=date)
     session.add(log)
     session.commit()
