@@ -18,7 +18,7 @@ def mock_requests():
 def test_login_in(mock_requests):
   data = {"username": USERNAME_TESTING,
           "password": PASSWORD_TESTING}
-  mock_requests.get(f'/', json=data)
+  mock_requests.get('/', json=data)
   assert f'{"username": {USERNAME_TESTING}, "password": {PASSWORD_TESTING}}' == requests.get("thtp://localhost:8000/").text
 
 

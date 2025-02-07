@@ -34,10 +34,10 @@ def get_password_hash(password):
 
 
 def get_user(username:str):
-  Session = DbConnection().get_session()
-  with Session:
+  session = DbConnection().get_session()
+  with session:
     user = select(User).where(User.username==username)
-  return Session.scalar(user)
+  return session.scalar(user)
 
 
 def authenticate_user(username: str, password: str):
