@@ -135,7 +135,7 @@ def read_protected_data(
     news = requests.post("http://localhost:8000/news", json={"number_of_news": 5}, headers=headers)
     return news.text
 
-  else:    # IF NOT AUTHENTICATED 
+  else:  
     print("Not authorized")
     news = requests.post("http://localhost:8000/news", json={"number_of_news": 1})
     return news.text

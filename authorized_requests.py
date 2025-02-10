@@ -34,7 +34,6 @@ def check_requests(user_id, header_number):
         return False
     print("Success Headers")
     for request in session.scalars(todays_requests):
-      request_date = request.date.date()
       print("Same day")
       headers += request.header_number
       if headers > 20:
