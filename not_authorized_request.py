@@ -1,6 +1,6 @@
-from sqlite_database import UserRequests
+from celery_folder.sqlite_database import UserRequests
 from sqlalchemy import select
-from db_connection import DbConnection
+from celery_folder.my_db_connection import DbConnection
 from datetime import timedelta, datetime
 
 
@@ -11,9 +11,12 @@ def not_authenticated_request_check(ip_adress, num_of_headers):
     user_requests = select(UserRequests).where(UserRequests.ip_adress==ip_adress).order_by(UserRequests.date.desc(), UserRequests.time.desc())
   request = session.scalars(user_requests).fetchmany(5)
   headers_count = num_of_headers
+  passed = False
   for number in range(len(request)):
     user_request = request[number]
-    passed = check_if_two_days_passed(user_request)
+    if number == 0:
+      print(user_request.date, user_request.header_number)
+      passed = check_if_two_days_passed(user_request)
     if not passed:
       headers_count += user_request.header_number
       if headers_count >= 5:

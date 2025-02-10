@@ -1,18 +1,18 @@
-from db_connection import DbConnection
-from sqlalchemy import select
-from sqlite_database import User
-from typing import Annotated
+from celery_folder.my_db_connection import DbConnection
+from celery_folder.sqlite_database import User, NewsFlow
 from fastapi import Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy import select, func
+from typing import Annotated
 from passlib.context import CryptContext
 from datetime import datetime, timedelta, timezone
-import jwt
 from jwt.exceptions import InvalidTokenError
 from dotenv import load_dotenv
-import os
 from models import TokenData
-import logging
 from typing import Optional
+import jwt
+import logging
+import os
 
 
 load_dotenv()
@@ -98,3 +98,20 @@ def validate_session(request: Request) -> bool:
     return False
   return session_access_token
 
+
+def get_headlines(number_of_headlines):
+  db = DbConnection()
+  session = db.get_session()
+  today = datetime.now().date()
+  result = []
+  with session:
+    news = select(NewsFlow).where(func.date(NewsFlow.date)==today)
+  counter = 0
+  for new in session.scalars(news):
+    print(new)
+    if counter <= number_of_headlines:
+      counter += 1
+      result.append(new.header_news)
+    else:
+       break
+  return result

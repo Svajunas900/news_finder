@@ -1,6 +1,6 @@
-from sqlalchemy import select
-from db_connection import DbConnection
-from sqlite_database import User, UserRequests
+from celery_folder.sqlite_database import User, UserRequests
+from celery_folder.my_db_connection import DbConnection
+from sqlalchemy import select, func
 from datetime import datetime, timedelta
 
 def authenticated_request_check(user_id, header_number):
@@ -19,27 +19,31 @@ def authenticated_request_check(user_id, header_number):
 def check_requests(user_id, header_number):
   db = DbConnection()
   session = db.get_session()
+  today = datetime.today().date()
   with session:
     user_requests = select(UserRequests).where(UserRequests.user_id==user_id).order_by(UserRequests.date, UserRequests.time)
+  with session:
+    todays_requests = select(UserRequests).where(func.date(UserRequests.date)==today, UserRequests.user_id==user_id)
   headers = header_number
-  today = datetime.today().date()
   user_request = session.scalar(user_requests)
   if user_request:
     for request in session.scalars(user_requests):
-      request_date = request.date.date()
       if check_if_ten_days_passed(request):
         print("10 days passed")
         print("Your free trial has ended")
         return False
-      if today == request_date:
-        print("Same day")
-        headers += request.header_number
-        if headers >= 20:
-          print("Over 20 headers today")
-          return False
     print("Success Headers")
+    for request in session.scalars(todays_requests):
+      request_date = request.date.date()
+      print("Same day")
+      headers += request.header_number
+      if headers > 20:
+        print("Over 20 headers today")
+        return False
   else: 
     return True
+  print("Request Successfull")
+  return True
 
 
 def check_if_ten_days_passed(request):

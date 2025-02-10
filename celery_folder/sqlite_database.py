@@ -1,7 +1,7 @@
 from sqlalchemy import DateTime, String, Boolean, ForeignKey, Integer
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column 
 from datetime import datetime
-from db_connection import DbConnection
+from celery_folder.my_db_connection import DbConnection
 
 
 class Base(DeclarativeBase):

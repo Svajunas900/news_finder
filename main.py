@@ -1,22 +1,19 @@
 from fastapi import FastAPI, Depends, HTTPException, status, Request
-from scraper import get_headlines
-from models import News, Token
-from sqlite_database import Logs, UserRequests, User as db_User
-from datetime import datetime, timedelta
-from functions import get_current_active_user, authenticate_user, create_access_token, validate_session
-from typing import Annotated
-from fastapi.security import OAuth2PasswordRequestForm
-import requests
-from db_connection import DbConnection
-from starlette.middleware.sessions import SessionMiddleware
-from dotenv import load_dotenv
-import os 
 from fastapi.responses import RedirectResponse
-import jwt
+from fastapi.security import OAuth2PasswordRequestForm
+from starlette.middleware.sessions import SessionMiddleware
+from celery_folder.my_db_connection import DbConnection
+from celery_folder.sqlite_database import Base, Logs, UserRequests, User as db_User
+from models import News, Token
+from functions import get_current_active_user, authenticate_user, create_access_token, validate_session, get_headlines
 from not_authorized_request import not_authenticated_request_check
 from authorized_requests import authenticated_request_check
-from db_connection import DbConnection
-from sqlite_database import Base
+from datetime import datetime, timedelta
+from typing import Annotated
+from dotenv import load_dotenv
+import requests
+import os 
+import jwt
 
 
 load_dotenv()
@@ -87,7 +84,7 @@ async def news(
       return {"Headlines": headlines,
               "Date": datetime.now()}
     else:
-       return "Error"
+       return "Too many requests"
     
 
 @app.post("/token")
@@ -134,10 +131,12 @@ def read_protected_data(
     headers = {
       "Authorization": f"Bearer {token}"
     }
+    print("Authorized")
     news = requests.post("http://localhost:8000/news", json={"number_of_news": 5}, headers=headers)
     return news.text
 
   else:    # IF NOT AUTHENTICATED 
+    print("Not authorized")
     news = requests.post("http://localhost:8000/news", json={"number_of_news": 1})
     return news.text
     

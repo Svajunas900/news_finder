@@ -1,0 +1,50 @@
+services:
+  fastapi:
+    build:
+      context: .
+      dockerfile: python.dockerfile
+    ports:
+      - "8000:8000"
+    networks:
+      - app_network
+  selenium_scraper:
+    image: selenium/standalone-chrome
+    ports: 
+      - "4444:4444"
+    networks:
+      - app_network
+  celery_beat:
+    build:
+      context: ./celery_folder
+      dockerfile: celery.dockerfile
+    container_name: celery_beat
+    command: celery -A celery_app beat --loglevel=info
+    depends_on:
+      - redis
+      - selenium_scraper
+    networks:
+      - app_network
+  celery_worker:
+    build:
+      context: ./celery_folder
+      dockerfile: celery.dockerfile
+    container_name: celery_worker
+    volumes:
+      - ./celery_app:/celery_app
+    depends_on:
+      - redis
+      - selenium_scraper
+    networks:
+      - app_network
+  redis:
+    image: redis:7.4.2
+    container_name: redis
+    ports:
+      - "6379:6379"
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+      - REDIS_DISABLE_COMMANDS=FLUSHDB,FLUSHALL
+    networks:
+      - app_network
+networks:
+  app_network:
