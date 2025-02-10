@@ -6,6 +6,6 @@ app = Celery("celery_app", broker='redis://redis:6379/0', backend='redis://redis
 app.conf.beat_schedule = {
     'my-periodic-task': {
         'task': 'tasks.compare_headlines',
-        'schedule': timedelta(seconds=30), 
+        'schedule': timedelta(hours=2), 
     },
 }
